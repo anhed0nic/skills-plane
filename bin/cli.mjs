@@ -9,7 +9,7 @@ const args = process.argv.slice(2);
 const command = args[0];
 const slug = args[1];
 
-const API_BASE_URL = process.env.SKILLS_API_URL || 'http://localhost:3000/api/v1';
+const API_BASE_URL = process.env.SKILLS_API_URL || 'https://skills-plane.vercel.app/api/v1';
 
 async function main() {
     if (command !== 'install' && command !== 'add') {

@@ -4,6 +4,9 @@
   "description": "A dashboard and marketplace for Agent Skills, Rules, and Workflows.",
   "author": "Ahmet Taner Atila",
   "license": "MIT",
+  "bin": {
+    "skills-plane": "./bin/cli.mjs"
+  },
   "keywords": [
     "ai",
     "agents",

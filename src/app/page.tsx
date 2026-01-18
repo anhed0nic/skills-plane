@@ -53,7 +53,7 @@ export default async function Home() {
           </Text>
 
           {/* CLI Box */}
-          <CopyCommand command="npx skills-plane add workflow-builder" />
+          <CopyCommand command="npx add-skill atilaahmettaner/skills-plane" />
 
           <HeroButtons />
         </Stack>

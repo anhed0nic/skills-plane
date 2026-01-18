@@ -16,6 +16,7 @@ import {
     IconSettings,
     IconLogin,
     IconRocket,
+    IconBrandGithub,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
@@ -78,91 +79,108 @@ export function Navbar() {
                                     cursor: 'pointer'
                                 }}
                             >
-                                <Text ff="monospace" size="xs" c="dimmed">$ npx skills-plane search</Text>
+                                <Text ff="monospace" size="xs" c="dimmed">$ npx add-skill owner/repo</Text>
                             </Box>
                         </Link>
-                        {user ? (
-                            <Group>
-                                <Button
-                                    component={Link}
-                                    href="/skills"
-                                    variant="subtle"
-                                    visibleFrom="xs"
-                                >
-                                    Explore Library
-                                </Button>
-                                <Button
-                                    component={Link}
-                                    href="/skills/new"
-                                    variant="outline"
-                                    leftSection={<IconRocket size={16} />}
-                                >
-                                    Submit Skill
-                                </Button>
-                                <Menu shadow="md" width={200}>
-                                    <Menu.Target>
-                                        <Button
-                                            variant="subtle"
-                                            leftSection={
+                        <Group gap="md">
+                            <Link
+                                href="https://github.com/atilaahmettaner/skills-plane"
+                                target="_blank"
+                                style={{ color: 'rgba(255, 255, 255, 0.5)', textDecoration: 'none' }}
+                                className="github-link-hover"
+                            >
+                                <Group gap={4}>
+                                    <IconBrandGithub size={20} />
+                                    <Text size="xs" visibleFrom="xs" fw={500}>Star on GitHub</Text>
+                                </Group>
+                            </Link>
+
+                            {user ? (
+                                <Group gap="sm">
+                                    <Button
+                                        component={Link}
+                                        href="/skills"
+                                        variant="subtle"
+                                        visibleFrom="xs"
+                                        size="sm"
+                                    >
+                                        Explore
+                                    </Button>
+                                    <Button
+                                        component={Link}
+                                        href="/skills/new"
+                                        variant="outline"
+                                        size="sm"
+                                        leftSection={<IconRocket size={16} />}
+                                    >
+                                        Submit
+                                    </Button>
+                                    <Menu shadow="md" width={200} position="bottom-end">
+                                        <Menu.Target>
+                                            <Button
+                                                variant="subtle"
+                                                size="sm"
+                                                p={4}
+                                                style={{ height: 'auto' }}
+                                            >
                                                 <Avatar
                                                     src={user.user_metadata.avatar_url}
                                                     alt={user.user_metadata.full_name}
                                                     radius="xl"
                                                     size="sm"
                                                 />
-                                            }
-                                        >
-                                            {user.user_metadata.full_name || user.email}
-                                        </Button>
-                                    </Menu.Target>
+                                            </Button>
+                                        </Menu.Target>
 
-                                    <Menu.Dropdown>
-                                        <Menu.Label>Application</Menu.Label>
-                                        <Menu.Item
-                                            component={Link}
-                                            href="/dashboard"
-                                            leftSection={
-                                                <IconUser style={{ width: rem(14), height: rem(14) }} />
-                                            }
-                                        >
-                                            Dashboard
-                                        </Menu.Item>
-                                        <Menu.Item
-                                            leftSection={
-                                                <IconSettings
-                                                    style={{ width: rem(14), height: rem(14) }}
-                                                />
-                                            }
-                                        >
-                                            Settings
-                                        </Menu.Item>
+                                        <Menu.Dropdown>
+                                            <Menu.Label>Application</Menu.Label>
+                                            <Menu.Item
+                                                component={Link}
+                                                href="/dashboard"
+                                                leftSection={
+                                                    <IconUser style={{ width: rem(14), height: rem(14) }} />
+                                                }
+                                            >
+                                                Dashboard
+                                            </Menu.Item>
+                                            <Menu.Item
+                                                leftSection={
+                                                    <IconSettings
+                                                        style={{ width: rem(14), height: rem(14) }}
+                                                    />
+                                                }
+                                            >
+                                                Settings
+                                            </Menu.Item>
 
-                                        <Menu.Divider />
+                                            <Menu.Divider />
 
-                                        <Menu.Item
-                                            color="red"
-                                            leftSection={
-                                                <IconLogout
-                                                    style={{ width: rem(14), height: rem(14) }}
-                                                />
-                                            }
-                                            onClick={handleSignOut}
-                                        >
-                                            Sign out
-                                        </Menu.Item>
-                                    </Menu.Dropdown>
-                                </Menu>
-                            </Group>
-                        ) : (
-                            <Button
-                                component={Link}
-                                href="/login"
-                                variant="default"
-                                leftSection={<IconLogin size={16} />}
-                            >
-                                Sign in
-                            </Button>
-                        )}
+                                            <Menu.Item
+                                                color="red"
+                                                leftSection={
+                                                    <IconLogout
+                                                        style={{ width: rem(14), height: rem(14) }}
+                                                    />
+                                                }
+                                                onClick={handleSignOut}
+                                            >
+                                                Sign out
+                                            </Menu.Item>
+                                        </Menu.Dropdown>
+                                    </Menu>
+                                </Group>
+                            ) : (
+                                <Button
+                                    component={Link}
+                                    href="/login"
+                                    variant="default"
+                                    size="sm"
+                                    leftSection={<IconLogin size={16} />}
+                                >
+                                    Sign in
+                                </Button>
+                            )}
+                        </Group>
                     </Group>
                 </Group>
             </Container>

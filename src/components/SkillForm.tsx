@@ -97,8 +97,21 @@ version: 1.0.0
             // Single skill or root level content
             setGithubUrl(data.githubUrl); // Use normalized URL
             setRepoStructure(data);
-            setGithubSuccess('✓ Repository validated successfully!');
+            setGithubSuccess(data.message || '✓ Repository follows add-skill standard!');
             setAvailableSkills([]);
+
+            // Auto-fill form fields if metadata is available
+            if (data.meta) {
+                const titleInput = document.querySelector('input[name="title"]') as HTMLInputElement;
+                const descInput = document.querySelector('textarea[name="description"]') as HTMLTextAreaElement;
+                const slugInput = document.querySelector('input[name="slug"]') as HTMLInputElement;
+
+                if (titleInput && data.meta.name) titleInput.value = data.meta.name;
+                if (descInput && data.meta.description) descInput.value = data.meta.description;
+                if (slugInput && data.meta.name) {
+                    slugInput.value = data.meta.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                }
+            }
         } catch (error: any) {
             setGithubError(error.message);
             setRepoStructure(null);

@@ -18,10 +18,10 @@ export async function POST(request: Request) {
             /github\.com\/([^\/]+)\/([^\/]+)\.git/,
             /^([^\/]+)\/([^\/]+)$/  // Support "owner/repo" format
         ];
-        
+
         let owner: string | null = null;
         let repo: string | null = null;
-        
+
         for (const pattern of urlPatterns) {
             const match = githubUrl.match(pattern);
             if (match) {
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
                 break;
             }
         }
-        
+
         if (!owner || !repo) {
             return NextResponse.json(
                 { error: "Invalid GitHub URL format. Use: github.com/owner/repo or owner/repo" },
@@ -49,60 +49,50 @@ export async function POST(request: Request) {
             githubHeaders['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
         }
 
-        // If validateOnly mode, use a lightweight check (no API calls!)
+        // If validateOnly mode, use a lightweight check
         if (validateOnly) {
-            // Try to fetch README.md or SKILL.md using raw.githubusercontent.com (no rate limit!)
             let branch = 'main';
-            let foundFile = false;
-            
+            let foundSkillFile = false;
+            let fileContent = '';
+
             // Try common branches
             for (const testBranch of ['main', 'master']) {
                 try {
-                    const testUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${testBranch}/README.md`;
-                    const response = await fetch(testUrl, { method: 'HEAD' });
+                    const testUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${testBranch}/SKILL.md`;
+                    const response = await fetch(testUrl);
                     if (response.ok) {
                         branch = testBranch;
-                        foundFile = true;
+                        foundSkillFile = true;
+                        fileContent = await response.text();
                         break;
                     }
-                } catch (e) {
-                    continue;
-                }
+                } catch (e) { continue; }
             }
-            
-            if (!foundFile) {
+
+            if (!foundSkillFile) {
                 return NextResponse.json(
-                    { error: "Repository not found or inaccessible. Please ensure it's public." },
+                    { error: "SKILL.md not found in the root of the repository. This is required for the add-skill standard." },
                     { status: 404 }
                 );
             }
-            
-            // Quick structure check using raw URLs (no API rate limit!)
-            const commonPaths = [
-                'skills/',
-                'rules/',
-                'workflows/',
-                'scripts/'
-            ];
-            
-            const foundStructure: any[] = [];
-            
-            // Check for skills directory by trying to fetch a common file
-            try {
-                const skillsCheckUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/skills/README.md`;
-                const skillsResponse = await fetch(skillsCheckUrl, { method: 'HEAD' });
-                if (skillsResponse.ok) {
-                    foundStructure.push({
-                        name: 'skills',
-                        path: 'skills',
-                        category: 'skills',
-                        type: 'directory'
-                    });
-                }
-            } catch (e) {
-                // No skills directory
+
+            // Parse frontmatter
+            const meta = parseFrontmatter(fileContent);
+            const missingFields = [];
+            if (!meta.name) missingFields.push('name');
+            if (!meta.description) missingFields.push('description');
+
+            if (missingFields.length > 0) {
+                return NextResponse.json(
+                    {
+                        error: `SKILL.md found, but is missing required frontmatter fields: ${missingFields.join(', ')}`,
+                        validated: false,
+                        meta
+                    },
+                    { status: 400 }
+                );
             }
-            
+
             return NextResponse.json({
                 success: true,
                 validated: true,
@@ -110,8 +100,8 @@ export async function POST(request: Request) {
                 owner,
                 repo,
                 branch,
-                message: "Repository validated! Click Submit to save.",
-                structure: foundStructure.length > 0 ? foundStructure : undefined
+                message: "✓ Repository follows add-skill standard!",
+                meta
             });
         }
 
@@ -120,7 +110,7 @@ export async function POST(request: Request) {
         try {
             const repoInfoUrl = `https://api.github.com/repos/${owner}/${repo}`;
             const repoResponse = await fetch(repoInfoUrl, { headers: githubHeaders });
-            
+
             if (!repoResponse.ok) {
                 if (repoResponse.status === 404) {
                     return NextResponse.json(
@@ -136,7 +126,7 @@ export async function POST(request: Request) {
                 }
                 throw new Error(`GitHub API error: ${repoResponse.status}`);
             }
-            
+
             const repoData = await repoResponse.json();
             branch = repoData.default_branch || 'main';
         } catch (e: any) {
@@ -144,7 +134,7 @@ export async function POST(request: Request) {
             // Try with default branches if repo info fails
             const branches = ['main', 'master'];
             let foundBranch = false;
-            
+
             for (const b of branches) {
                 try {
                     const testUrl = `https://api.github.com/repos/${owner}/${repo}/contents?ref=${b}`;
@@ -158,7 +148,7 @@ export async function POST(request: Request) {
                     continue;
                 }
             }
-            
+
             if (!foundBranch) {
                 return NextResponse.json(
                     { error: "Repository not found or inaccessible. Please ensure the repository is public." },
@@ -180,15 +170,15 @@ export async function POST(request: Request) {
         try {
             const treeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
             const treeResponse = await fetch(treeUrl, { headers: githubHeaders });
-            
+
             if (treeResponse.ok) {
                 const treeData = await treeResponse.json();
-                
+
                 // Check if there's a SKILL.md or README.md in root
-                const rootSkillFile = treeData.tree.find((item: any) => 
+                const rootSkillFile = treeData.tree.find((item: any) =>
                     item.path === 'SKILL.md' || item.path === 'README.md'
                 );
-                
+
                 if (rootSkillFile) {
                     const contentUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${rootSkillFile.path}`;
                     const contentResponse = await fetch(contentUrl);
@@ -197,12 +187,12 @@ export async function POST(request: Request) {
                         return await buildSkillResponseFromTree(owner, repo, branch, '', content, rootSkillFile.path, treeData.tree, githubHeaders);
                     }
                 }
-                
+
                 // Check for skills/ directory
-                const skillsItems = treeData.tree.filter((item: any) => 
+                const skillsItems = treeData.tree.filter((item: any) =>
                     item.path.startsWith('skills/') && item.type === 'tree'
                 );
-                
+
                 if (skillsItems.length > 0) {
                     // Extract unique skill directories
                     const skillDirs = new Set<string>();
@@ -212,29 +202,29 @@ export async function POST(request: Request) {
                             skillDirs.add(parts[1]); // Get the skill name
                         }
                     });
-                    
+
                     const skillItems = Array.from(skillDirs).map(name => ({
                         name,
                         path: `skills/${name}`,
                         category: 'skills'
                     }));
-                    
+
                     return NextResponse.json({
                         multipleSkills: true,
                         skills: skillItems,
                         githubUrl: `https://github.com/${owner}/${repo}`,
                     });
                 }
-                
+
                 // Check for other directories (rules, workflows, etc.)
                 const otherDirs = ['rules', 'workflows', 'scripts', 'references'];
                 const foundItems: any[] = [];
-                
+
                 for (const dirName of otherDirs) {
-                    const dirItems = treeData.tree.filter((item: any) => 
+                    const dirItems = treeData.tree.filter((item: any) =>
                         item.path.startsWith(`${dirName}/`) && item.type === 'tree'
                     );
-                    
+
                     if (dirItems.length > 0) {
                         const subDirs = new Set<string>();
                         dirItems.forEach((item: any) => {
@@ -243,7 +233,7 @@ export async function POST(request: Request) {
                                 subDirs.add(parts[1]);
                             }
                         });
-                        
+
                         subDirs.forEach(name => {
                             foundItems.push({
                                 name,
@@ -253,7 +243,7 @@ export async function POST(request: Request) {
                         });
                     }
                 }
-                
+
                 if (foundItems.length > 0) {
                     return NextResponse.json({
                         multipleSkills: true,
@@ -271,20 +261,20 @@ export async function POST(request: Request) {
             let rootSkillUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/SKILL.md`;
             let rootResponse = await fetch(rootSkillUrl);
             let filename = 'SKILL.md';
-            
+
             if (!rootResponse.ok) {
                 rootSkillUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/README.md`;
                 rootResponse = await fetch(rootSkillUrl);
                 filename = 'README.md';
             }
-            
+
             if (rootResponse.ok) {
                 const skillContent = await rootResponse.text();
                 // For fallback, fetch tree to get other files
                 const treeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
                 const treeResponse = await fetch(treeUrl, { headers: githubHeaders });
                 const treeData = treeResponse.ok ? await treeResponse.json() : { tree: [] };
-                
+
                 return await buildSkillResponseFromTree(owner, repo, branch, '', skillContent, filename, treeData.tree, githubHeaders);
             }
         } catch (e) {
@@ -303,6 +293,28 @@ export async function POST(request: Request) {
             { status: 500 }
         );
     }
+}
+
+function parseFrontmatter(content: string) {
+    const meta: Record<string, string> = {};
+    const match = content.match(/^---\r?\n([\s\S]+?)\r?\n---/);
+
+    if (match) {
+        const yaml = match[1];
+        const lines = yaml.split('\n');
+        for (const line of lines) {
+            const separatorIndex = line.indexOf(':');
+            if (separatorIndex !== -1) {
+                const key = line.slice(0, separatorIndex).trim();
+                const value = line.slice(separatorIndex + 1).trim();
+                if (key) {
+                    meta[key] = value;
+                }
+            }
+        }
+    }
+
+    return meta;
 }
 
 async function fetchSpecificSkill(owner: string, repo: string, branch: string, skillPath: string, githubHeaders: HeadersInit) {
@@ -326,12 +338,12 @@ async function fetchSpecificSkill(owner: string, repo: string, branch: string, s
 
         const skillContent = await response.text();
         const filename = skillMdUrl.includes('SKILL.md') ? 'SKILL.md' : 'README.md';
-        
+
         // Use Tree API to get all files efficiently
         try {
             const treeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
             const treeResponse = await fetch(treeUrl, { headers: githubHeaders });
-            
+
             if (treeResponse.ok) {
                 const treeData = await treeResponse.json();
                 return await buildSkillResponseFromTree(owner, repo, branch, skillPath, skillContent, filename, treeData.tree, githubHeaders);
@@ -339,7 +351,7 @@ async function fetchSpecificSkill(owner: string, repo: string, branch: string, s
         } catch (e) {
             // Fallback to old method
         }
-        
+
         return await buildSkillResponse(owner, repo, branch, skillPath, skillContent, filename, githubHeaders);
     } catch (error) {
         return NextResponse.json(
@@ -351,11 +363,11 @@ async function fetchSpecificSkill(owner: string, repo: string, branch: string, s
 
 // New efficient method using Git Tree API
 async function buildSkillResponseFromTree(
-    owner: string, 
-    repo: string, 
-    branch: string, 
-    basePath: string, 
-    skillContent: string, 
+    owner: string,
+    repo: string,
+    branch: string,
+    basePath: string,
+    skillContent: string,
     mainFilename: string,
     treeItems: any[],
     githubHeaders: HeadersInit
@@ -367,18 +379,18 @@ async function buildSkillResponseFromTree(
     // Filter files that belong to this skill path
     const relevantFiles = treeItems.filter((item: any) => {
         if (item.type !== 'blob') return false; // Only files, not directories
-        
+
         const path = item.path;
-        
+
         // Skip binary files
         const binaryExtensions = ['.zip', '.jar', '.tar', '.gz', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.pdf', '.exe', '.bin', '.woff', '.woff2', '.ttf', '.eot'];
         if (binaryExtensions.some(ext => path.toLowerCase().endsWith(ext))) return false;
-        
+
         // If basePath is provided, only include files from that path
         if (basePath) {
             return path.startsWith(`${basePath}/`) && path !== `${basePath}/${mainFilename}`;
         }
-        
+
         // For root level, exclude common directories we don't want
         const excludeDirs = ['.github/', 'packages/', 'node_modules/', 'dist/', 'build/', 'skills/'];
         return !excludeDirs.some(dir => path.startsWith(dir));
@@ -391,7 +403,7 @@ async function buildSkillResponseFromTree(
             const response = await fetch(fileUrl);
             if (response.ok) {
                 const content = await response.text();
-                const relativePath = basePath 
+                const relativePath = basePath
                     ? item.path.replace(`${basePath}/`, '')
                     : item.path;
                 return { filename: relativePath, content };
@@ -425,27 +437,27 @@ async function buildSkillResponse(owner: string, repo: string, branch: string, b
 
     // Fetch ALL files from the skill directory recursively
     const fetchedPaths = new Set([mainFilename]); // Track what we've already fetched
-    
+
     try {
         // Get all files in the skill directory
         const skillDirPath = basePath || '.';
         const dirUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${skillDirPath}?ref=${branch}`;
         const dirResponse = await fetch(dirUrl, { headers: githubHeaders });
-        
+
         if (dirResponse.ok) {
             const dirData = await dirResponse.json();
-            
+
             // Process all items in the directory
             for (const item of dirData) {
                 if (item.type === 'file') {
                     // Skip if we already have this file
                     if (fetchedPaths.has(item.name)) continue;
-                    
+
                     // Skip binary files
                     const binaryExtensions = ['.zip', '.jar', '.tar', '.gz', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.pdf', '.exe', '.bin', '.woff', '.woff2', '.ttf', '.eot'];
                     const isBinary = binaryExtensions.some(ext => item.name.toLowerCase().endsWith(ext));
                     if (isBinary) continue;
-                    
+
                     try {
                         const fileUrl = item.download_url;
                         const fileResponse = await fetch(fileUrl);
@@ -460,9 +472,9 @@ async function buildSkillResponse(owner: string, repo: string, branch: string, b
                 } else if (item.type === 'dir') {
                     // Recursively fetch files from subdirectories
                     await fetchDirectoryRecursive(
-                        owner, 
-                        repo, 
-                        branch, 
+                        owner,
+                        repo,
+                        branch,
                         basePath ? `${basePath}/${item.name}` : item.name,
                         item.name,
                         files,
@@ -502,31 +514,31 @@ async function fetchDirectoryRecursive(
     try {
         const dirUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${fullPath}?ref=${branch}`;
         const dirResponse = await fetch(dirUrl, { headers: githubHeaders });
-        
+
         if (!dirResponse.ok) return;
-        
+
         const dirData = await dirResponse.json();
-        
+
         for (const item of dirData) {
             const itemRelativePath = `${relativePath}/${item.name}`;
-            
+
             if (item.type === 'file') {
                 // Skip if already fetched
                 if (fetchedPaths.has(itemRelativePath)) continue;
-                
+
                 // Skip binary files (zip, jar, png, jpg, etc.)
                 const binaryExtensions = ['.zip', '.jar', '.tar', '.gz', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.pdf', '.exe', '.bin', '.woff', '.woff2', '.ttf', '.eot'];
                 const isBinary = binaryExtensions.some(ext => item.name.toLowerCase().endsWith(ext));
                 if (isBinary) continue;
-                
+
                 try {
                     const fileUrl = item.download_url;
                     const fileResponse = await fetch(fileUrl);
                     if (fileResponse.ok) {
                         const content = await fileResponse.text();
-                        files.push({ 
-                            filename: itemRelativePath, 
-                            content 
+                        files.push({
+                            filename: itemRelativePath,
+                            content
                         });
                         fetchedPaths.add(itemRelativePath);
                     }
@@ -566,10 +578,10 @@ async function fetchAllSkillsMerged(owner: string, repo: string, branch: string,
         }
 
         const treeData = await treeResponse.json();
-        
+
         // Find all files in skills/ directory
-        const skillFiles = treeData.tree.filter((item: any) => 
-            item.type === 'blob' && 
+        const skillFiles = treeData.tree.filter((item: any) =>
+            item.type === 'blob' &&
             item.path.startsWith('skills/') &&
             !item.path.endsWith('.zip') &&
             !item.path.endsWith('.jar') &&
@@ -587,7 +599,7 @@ async function fetchAllSkillsMerged(owner: string, repo: string, branch: string,
         // Fetch all files in parallel (limited to 100)
         const allFiles: SkillFile[] = [];
         const filesToFetch = skillFiles.slice(0, 100);
-        
+
         const fetchPromises = filesToFetch.map(async (item: any) => {
             try {
                 const fileUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${item.path}`;

@@ -73,7 +73,7 @@ export function SkillsGrid({ skills }: SkillsGridProps) {
                                     Visual orchestration for connecting multiple agents into a unified pipeline.
                                 </Text>
                                 <Box mt="md">
-                                    <CopyCommand command="npx skills-plane add workflow-builder" />
+                                    <CopyCommand command="npx add-skill vercel-labs/add-skill" />
                                 </Box>
                             </Stack>
                         </Group>

@@ -11,6 +11,16 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+.github-link-hover {
+    transition: all 0.2s ease;
+}
+
+.github-link-hover:hover {
+    color: #22e1fe !important;
+    opacity: 1 !important;
+    transform: translateY(-1px);
+}
+
 .gradient-text {
     background: linear-gradient(135deg, #fff 0%, #22e1fe 100%);
     -webkit-background-clip: text;

@@ -1,7 +1,9 @@
-import { Container, Title, Text, Button, Group, Stack, SimpleGrid, Badge, Box, TextInput, Card, Avatar, AvatarGroup } from "@mantine/core";
-import { IconRocket, IconSearch, IconUpload, IconCopy, IconArrowRight } from "@tabler/icons-react";
+import { Container, Title, Text, Stack, SimpleGrid, Badge, Box, TextInput, Card, Group } from "@mantine/core";
+import { IconRocket, IconSearch, IconArrowRight } from "@tabler/icons-react";
 import { listSkills } from "@/domain/skills/repository";
 import { SkillCard } from "@/components/SkillCard";
+import { CopyCommand } from "@/components/CopyCommand";
+import { HeroButtons } from "@/components/HeroButtons";
 import { Database } from "@/lib/database.types";
 
 type SkillWithProfile = Database["public"]["Tables"]["skills"]["Row"] & {
@@ -52,45 +54,9 @@ export default async function Home() {
           </Text>
 
           {/* CLI Box */}
-          <Group
-            gap="xs"
-            px="md"
-            py={8}
-            style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: '10px',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
-            }}
-          >
-            <Text ff="monospace" size="sm" c="cyan">npx</Text>
-            <Text ff="monospace" size="sm">skills-plane search</Text>
-            <IconCopy size={14} style={{ cursor: 'pointer', opacity: 0.5 }} />
-          </Group>
+          <CopyCommand command="npx skills-plane search" />
 
-          <Group mt="md">
-            <Button
-              size="lg"
-              radius="md"
-              px={40}
-              variant="filled"
-              color="cyan"
-              leftSection={<IconSearch size={20} />}
-              styles={{ root: { height: '54px' } }}
-            >
-              Browse Skills
-            </Button>
-            <Button
-              size="lg"
-              radius="md"
-              px={40}
-              variant="outline"
-              color="gray"
-              leftSection={<IconUpload size={20} />}
-              styles={{ root: { height: '54px', border: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(255, 255, 255, 0.02)' } }}
-            >
-              Submit Skill
-            </Button>
-          </Group>
+          <HeroButtons />
         </Stack>
 
         {/* Search & Filter Section */}
@@ -139,14 +105,6 @@ export default async function Home() {
                   <Text className="text-dimmed" size="lg" style={{ maxWidth: 400 }}>
                     Visual orchestration for connecting multiple agents into a unified pipeline.
                   </Text>
-                  <Group gap="xs" mt="md">
-                    <AvatarGroup>
-                      <Avatar src="" />
-                      <Avatar src="" />
-                      <Avatar src="" />
-                    </AvatarGroup>
-                    <Text size="xs" className="text-dimmed" fw={600}>8.2k builders active</Text>
-                  </Group>
                 </Stack>
               </Group>
               <IconArrowRight size={32} style={{ alignSelf: 'center' }} color="rgba(255,255,255,0.2)" />

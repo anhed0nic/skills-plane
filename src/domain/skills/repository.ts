@@ -19,7 +19,7 @@ export async function getSkillBySlug(slug: string): Promise<Skill | null> {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from("skills")
-        .select("*, profiles(*)")
+        .select("*, profiles(username, avatar_url, full_name, is_verified)")
         .eq("slug", slug)
         .single();
 
@@ -29,7 +29,7 @@ export async function getSkillBySlug(slug: string): Promise<Skill | null> {
 
 export async function listSkills(options?: { authorId?: string; search?: string }) {
     const supabase = await createClient();
-    let query = supabase.from("skills").select("*, profiles(*)");
+    let query = supabase.from("skills").select("*, profiles(username, avatar_url, full_name, is_verified)");
 
     if (options?.authorId) {
         query = query.eq("author_id", options.authorId);

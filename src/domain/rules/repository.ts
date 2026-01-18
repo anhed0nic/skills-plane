@@ -19,7 +19,7 @@ export async function getRuleBySlug(slug: string): Promise<Rule | null> {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from("rules")
-        .select("*")
+        .select("*, profiles(username, avatar_url, full_name, is_verified)")
         .eq("slug", slug)
         .single();
 
@@ -29,7 +29,7 @@ export async function getRuleBySlug(slug: string): Promise<Rule | null> {
 
 export async function listRules(options?: { authorId?: string }) {
     const supabase = await createClient();
-    let query = supabase.from("rules").select("*, profiles(*)");
+    let query = supabase.from("rules").select("*, profiles(username, avatar_url, full_name, is_verified)");
 
     if (options?.authorId) {
         query = query.eq("author_id", options.authorId);

@@ -19,7 +19,7 @@ export async function getWorkflowBySlug(slug: string): Promise<Workflow | null> 
     const supabase = await createClient();
     const { data, error } = await supabase
         .from("workflows")
-        .select("*")
+        .select("*, profiles(username, avatar_url, full_name, is_verified)")
         .eq("slug", slug)
         .single();
 
@@ -29,7 +29,7 @@ export async function getWorkflowBySlug(slug: string): Promise<Workflow | null> 
 
 export async function listWorkflows(options?: { authorId?: string }) {
     const supabase = await createClient();
-    let query = supabase.from("workflows").select("*, profiles(*)");
+    let query = supabase.from("workflows").select("*, profiles(username, avatar_url, full_name, is_verified)");
 
     if (options?.authorId) {
         query = query.eq("author_id", options.authorId);
